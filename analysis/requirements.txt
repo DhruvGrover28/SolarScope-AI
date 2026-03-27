@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 jinja2
 sqlalchemy
-passlib[bcrypt]
+passlib
 itsdangerous
 python-multipart
 requests
