@@ -1,18 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<header>
-  <div>
-    <div class="brand">SolarScope</div>
-    <p>Project details and analysis summary.</p>
-  </div>
-  <div class="header-actions">
-    {% if avatar_url %}
-      <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
-    {% endif %}
+<div class="page-title">
+  <h1>Project overview</h1>
+  <p>Project details and analysis summary.</p>
+  <div class="page-actions">
     <a class="link" href="/dashboard">Back to dashboard</a>
     <a class="link" style="margin-left: 16px;" href="/projects/{{ project.id }}/report">Download report</a>
   </div>
-</header>
+</div>
 
 <div class="grid grid-2">
   <div class="card">

@@ -21,8 +21,39 @@
 </head>
 <body>
   <button id="theme-toggle" class="icon-button theme-toggle" type="button" aria-label="Toggle dark mode">🌙</button>
+  {% if show_header %}
+    <header class="site-header">
+      <div class="header-left">
+        {% if avatar_url %}
+          <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
+        {% endif %}
+        <div>
+          <div class="header-name">{{ user_name or "" }}</div>
+          <div class="header-subtitle">Solar analytics workspace</div>
+        </div>
+      </div>
+      <div class="brand brand-center">SolarScope.AI</div>
+      <div class="header-actions">
+        <a class="icon-button" href="/settings" aria-label="Settings">⚙️</a>
+        <form method="post" action="/logout" data-logout-form>
+          <button class="button-secondary" type="submit">Logout</button>
+        </form>
+      </div>
+    </header>
+  {% endif %}
   <div class="container">
     {% block content %}{% endblock %}
+  </div>
+  <div id="logout-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <h3>Log out?</h3>
+      <p>Are you sure you want to log out?</p>
+      <div class="modal-actions">
+        <button id="logout-confirm" class="button-secondary" type="button">Yes, logout</button>
+        <button id="logout-cancel" type="button">Cancel</button>
+      </div>
+    </div>
   </div>
   <footer class="site-footer">
     <div>Built by Dhruv Grover</div>

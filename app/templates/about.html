@@ -1,17 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<header>
-  <div>
-    <div class="brand">SolarScope</div>
-    <p>How to use SolarScope.AI effectively.</p>
-  </div>
-  <div class="header-actions">
-    {% if avatar_url %}
-      <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
-    {% endif %}
-    <a class="link" href="/dashboard">Back to dashboard</a>
-  </div>
-</header>
+<div class="page-title">
+  <h1>About SolarScope.AI</h1>
+  <p>How to use SolarScope.AI effectively.</p>
+  <a class="link" href="/dashboard">Back to dashboard</a>
+</div>
 
 <div class="grid grid-2">
   <div class="card">

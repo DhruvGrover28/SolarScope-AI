@@ -1,17 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<header>
-  <div>
-    <div class="brand">SolarScope</div>
-    <p>Compare heuristic vs model segmentation results.</p>
-  </div>
-  <div class="header-actions">
-    {% if avatar_url %}
-      <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
-    {% endif %}
-    <a class="link" href="/dashboard">Back to dashboard</a>
-  </div>
-</header>
+<div class="page-title">
+  <h1>Segmentation evaluation</h1>
+  <p>Compare heuristic vs model segmentation results.</p>
+  <a class="link" href="/dashboard">Back to dashboard</a>
+</div>
 
 <div class="card">
   <h2>Upload evaluation image</h2>

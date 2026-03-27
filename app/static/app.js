@@ -150,3 +150,37 @@ document.querySelectorAll(".toggle-password").forEach((button) => {
 		input.type = input.type === "password" ? "text" : "password";
 	});
 });
+
+const logoutModal = document.getElementById("logout-modal");
+const logoutConfirm = document.getElementById("logout-confirm");
+const logoutCancel = document.getElementById("logout-cancel");
+const logoutForm = document.querySelector("[data-logout-form]");
+const logoutBackdrop = document.querySelector("#logout-modal .modal-backdrop");
+
+if (logoutForm && logoutModal) {
+	logoutForm.addEventListener("submit", (event) => {
+		event.preventDefault();
+		logoutModal.classList.remove("hidden");
+		logoutModal.setAttribute("aria-hidden", "false");
+	});
+}
+
+if (logoutCancel && logoutModal) {
+	logoutCancel.addEventListener("click", () => {
+		logoutModal.classList.add("hidden");
+		logoutModal.setAttribute("aria-hidden", "true");
+	});
+}
+
+if (logoutBackdrop && logoutModal) {
+	logoutBackdrop.addEventListener("click", () => {
+		logoutModal.classList.add("hidden");
+		logoutModal.setAttribute("aria-hidden", "true");
+	});
+}
+
+if (logoutConfirm && logoutForm) {
+	logoutConfirm.addEventListener("click", () => {
+		logoutForm.submit();
+	});
+}

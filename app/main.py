@@ -319,6 +319,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "currency_symbol": currency_symbol(preferences["currency"]),
             "user_name": user.name or "there",
             "avatar_url": resolve_user_avatar(user),
+            "show_header": True,
         },
     )
 
@@ -329,7 +330,12 @@ def about_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request,
         "about.html",
-        {"request": request, "avatar_url": resolve_user_avatar(user)},
+        {
+            "request": request,
+            "avatar_url": resolve_user_avatar(user),
+            "user_name": user.name or "",
+            "show_header": True,
+        },
     )
 
 
@@ -347,6 +353,8 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
             "user": user,
             "avatars": avatars,
             "avatar_url": resolve_user_avatar(user),
+            "user_name": user.name or "",
+            "show_header": True,
         },
     )
 
@@ -509,7 +517,12 @@ def evaluation_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request,
         "evaluate.html",
-        {"request": request, "avatar_url": resolve_user_avatar(user)},
+        {
+            "request": request,
+            "avatar_url": resolve_user_avatar(user),
+            "user_name": user.name or "",
+            "show_header": True,
+        },
     )
 
 
@@ -543,6 +556,8 @@ def evaluate_segmentation(
         {
             "request": request,
             "avatar_url": resolve_user_avatar(user),
+            "user_name": user.name or "",
+            "show_header": True,
             "model_mask": str(model_path.relative_to(DATA_DIR)),
             "heuristic_mask": str(heuristic_path.relative_to(DATA_DIR)),
             "image_path": str(file_path.relative_to(DATA_DIR)),
@@ -797,6 +812,8 @@ def project_detail(
             "currency_symbol": currency_symbol(preferences["currency"]),
             "units": preferences["units"],
             "avatar_url": resolve_user_avatar(user),
+            "user_name": user.name or "",
+            "show_header": True,
         },
     )
 

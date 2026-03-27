@@ -1,22 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<header class="dashboard-header">
-  <div class="header-spacer"></div>
-  <div class="dashboard-title">
-    <div class="brand brand-center">SolarScope.AI</div>
-    <p id="greeting" class="greeting" data-name="{{ user_name }}">Welcome back</p>
-    <p class="subtitle">Analyze rooftops using imagery, address data, or manual input.</p>
-  </div>
-  <div class="header-actions">
-    {% if avatar_url %}
-      <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
-    {% endif %}
-    <a class="icon-button" href="/settings" aria-label="Settings">⚙️</a>
-    <form method="post" action="/logout">
-      <button class="button-secondary" type="submit">Logout</button>
-    </form>
-  </div>
-</header>
+<div class="greeting-wrap">
+  <p id="greeting" class="greeting" data-name="{{ user_name }}">Welcome back</p>
+  <p class="subtitle">Analyze rooftops using imagery, address data, or manual input.</p>
+</div>
 
 <div style="margin-bottom: 20px;">
   <a class="link" href="/evaluate">Evaluate segmentation</a>
