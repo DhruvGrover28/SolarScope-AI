@@ -2,6 +2,9 @@
 
 SolarScope is a lightweight, resume-ready solar rooftop analysis tool. Users can log in, create projects, and analyze rooftop potential using image upload, address lookup, manual area input, or map drawing.
 
+## Live Website
+https://solarscope-ai.onrender.com/
+
 ## Features
 - Login/register dashboard with saved projects
 - Image upload with segmentation and confidence score
@@ -10,6 +13,15 @@ SolarScope is a lightweight, resume-ready solar rooftop analysis tool. Users can
 - Manual area mode for quick estimates
 - PDF report export
 - Optional TorchScript model support
+
+## Example Use Case
+**Input Image**
+
+![Example Input Image](example3.jpg)
+
+**Output Results**
+
+![Example Output Result](Result_project.png)
 
 ## Quick Start
 1) Install dependencies:
@@ -43,3 +55,6 @@ If not set, SolarScope uses the heuristic pipeline.
 ## Notes
 - Address-based analysis depends on OpenStreetMap data. Some areas may not have footprints.
 - Draw mode uses Leaflet and OpenStreetMap tiles.
+
+## License
+This project is licensed under the MIT License - see the LICENSE file for details.
