@@ -107,8 +107,17 @@ def login(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(User.email == email.lower().strip()).first()
-    if not user or not verify_password(password, user.password_hash):
+    normalized_email = email.lower().strip()
+    normalized_password = password.strip()
+    user = db.query(User).filter(User.email == normalized_email).first()
+    if not normalized_password:
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"request": request, "error": "Password cannot be empty"},
+            status_code=400,
+        )
+    if not user or not verify_password(normalized_password, user.password_hash):
         return templates.TemplateResponse(
             request,
             "login.html",
@@ -135,6 +144,7 @@ def register(
     db: Session = Depends(get_db),
 ):
     normalized_email = email.lower().strip()
+    normalized_password = password.strip()
     if db.query(User).filter(User.email == normalized_email).first():
         return templates.TemplateResponse(
             request,
@@ -143,7 +153,9 @@ def register(
             status_code=400,
         )
 
-    user = User(email=normalized_email, password_hash=hash_password(password))
+    user = User(
+        email=normalized_email, password_hash=hash_password(normalized_password)
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
