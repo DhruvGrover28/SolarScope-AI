@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<header>
+  <div>
+    <div class="brand">SolarScope</div>
+    <p>Project details and analysis summary.</p>
+  </div>
+  <div>
+    <a class="link" href="/dashboard">Back to dashboard</a>
+    <a class="link" style="margin-left: 16px;" href="/projects/{{ project.id }}/report">Download report</a>
+  </div>
+</header>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>{{ project.name }}</h2>
+    <p>{{ project.address or "" }}</p>
+    <div class="tag" style="margin-top: 12px;">{{ project.method }}</div>
+    <div class="stats" style="margin-top: 16px;">
+      <div class="stat">
+        <p>Usable area</p>
+        <h3>{{ "%.1f"|format(project.usable_area_m2) }} m2</h3>
+      </div>
+      <div class="stat">
+        <p>Panel count</p>
+        <h3>{{ project.panel_count }}</h3>
+      </div>
+      <div class="stat">
+        <p>System size</p>
+        <h3>{{ "%.1f"|format(project.power_kw) }} kW</h3>
+      </div>
+      <div class="stat">
+        <p>Annual kWh</p>
+        <h3>{{ "%.0f"|format(project.annual_kwh) }}</h3>
+      </div>
+      <div class="stat">
+        <p>Confidence</p>
+        <h3>{{ "%.0f"|format(project.confidence * 100) }}%</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Financials</h2>
+    <div class="stats" style="margin-top: 16px;">
+      <div class="stat">
+        <p>Installation cost</p>
+        <h3>{{ "%.0f"|format(project.installation_cost) }}</h3>
+      </div>
+      <div class="stat">
+        <p>Annual savings</p>
+        <h3>{{ "%.0f"|format(project.annual_savings) }}</h3>
+      </div>
+      <div class="stat">
+        <p>Payback (years)</p>
+        <h3>{{ "%.1f"|format(project.payback_years) }}</h3>
+      </div>
+      <div class="stat">
+        <p>25-year savings</p>
+        <h3>{{ "%.0f"|format(project.total_savings_25yrs) }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if project.image_path %}
+  <div class="grid grid-2" style="margin-top: 24px;">
+    <div class="card">
+      <h3>Uploaded image</h3>
+      <img class="image-preview" src="/data/{{ project.image_path }}" />
+    </div>
+    {% if project.mask_path %}
+      <div class="card">
+        <h3>Segmentation mask</h3>
+        <img class="image-preview" src="/data/{{ project.mask_path }}" />
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

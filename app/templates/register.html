@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card auth-card">
+  <h1>Create account</h1>
+  <p>Start your first solar analysis in minutes.</p>
+  {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/register" class="grid">
+    <div>
+      <label>Email</label>
+      <input type="email" name="email" required />
+    </div>
+    <div>
+      <label>Password</label>
+      <input type="password" name="password" required minlength="6" />
+    </div>
+    <button type="submit">Register</button>
+  </form>
+  <p style="margin-top: 16px;">Already have an account? <a class="link" href="/login">Login</a></p>
+</div>
+{% endblock %}

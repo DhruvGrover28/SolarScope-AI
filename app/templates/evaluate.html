@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<header>
+  <div>
+    <div class="brand">SolarScope</div>
+    <p>Compare heuristic vs model segmentation results.</p>
+  </div>
+  <a class="link" href="/dashboard">Back to dashboard</a>
+</header>
+
+<div class="card">
+  <h2>Upload evaluation image</h2>
+  <form class="grid" method="post" action="/evaluate" enctype="multipart/form-data">
+    <div>
+      <label>Image file</label>
+      <input type="file" name="image" accept=".jpg,.jpeg,.png" required />
+    </div>
+    <button type="submit">Run comparison</button>
+  </form>
+</div>
+
+{% if image_path %}
+  <div class="grid grid-2" style="margin-top: 24px;">
+    <div class="card">
+      <h3>Uploaded image</h3>
+      <img class="image-preview" src="/data/{{ image_path }}" />
+    </div>
+    <div class="card">
+      <h3>Heuristic mask ({{ "%.0f"|format(heuristic_conf * 100) }}%)</h3>
+      <img class="image-preview" src="/data/{{ heuristic_mask }}" />
+    </div>
+    <div class="card">
+      <h3>Model mask ({{ "%.0f"|format(model_conf * 100) }}%)</h3>
+      <img class="image-preview" src="/data/{{ model_mask }}" />
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

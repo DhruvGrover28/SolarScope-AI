@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block content %}
+<header>
+  <div>
+    <div class="brand">SolarScope</div>
+    <p>Analyze rooftops using imagery, address data, or manual input.</p>
+  </div>
+  <form method="post" action="/logout">
+    <button class="button-secondary" type="submit">Logout</button>
+  </form>
+</header>
+
+<div style="margin-bottom: 20px;">
+  <a class="link" href="/evaluate">Evaluate segmentation</a>
+</div>
+
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<section class="grid grid-2">
+  <div class="card">
+    <h2>Upload rooftop image</h2>
+    <form class="grid" method="post" action="/projects/upload" enctype="multipart/form-data">
+      <div>
+        <label>Project name</label>
+        <input type="text" name="name" required />
+      </div>
+      <div>
+        <label>Estimated roof width (m)</label>
+        <input type="number" step="0.1" name="roof_width_m" placeholder="Optional" />
+      </div>
+      <div>
+        <label>Image file</label>
+        <input type="file" name="image" accept=".jpg,.jpeg,.png" required />
+      </div>
+      <div class="grid grid-3">
+        <div>
+          <label>Panel wattage (W)</label>
+          <input type="number" name="panel_wattage" value="{{ assumptions.panel_wattage_w }}" />
+        </div>
+        <div>
+          <label>Cost per watt</label>
+          <input type="number" step="0.1" name="cost_per_watt" value="{{ assumptions.cost_per_watt }}" />
+        </div>
+        <div>
+          <label>Tariff rate</label>
+          <input type="number" step="0.1" name="tariff_rate" value="{{ assumptions.tariff_rate }}" />
+        </div>
+      </div>
+      <button type="submit">Analyze upload</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Address-based analysis</h2>
+    <form class="grid" method="post" action="/projects/address">
+      <div>
+        <label>Project name</label>
+        <input type="text" name="name" required />
+      </div>
+      <div>
+        <label>Address</label>
+        <input type="text" name="address" placeholder="123 Main St, City" required />
+      </div>
+      <div class="grid grid-3">
+        <div>
+          <label>Panel wattage (W)</label>
+          <input type="number" name="panel_wattage" value="{{ assumptions.panel_wattage_w }}" />
+        </div>
+        <div>
+          <label>Cost per watt</label>
+          <input type="number" step="0.1" name="cost_per_watt" value="{{ assumptions.cost_per_watt }}" />
+        </div>
+        <div>
+          <label>Tariff rate</label>
+          <input type="number" step="0.1" name="tariff_rate" value="{{ assumptions.tariff_rate }}" />
+        </div>
+      </div>
+      <button type="submit">Analyze address</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Manual roof area</h2>
+    <p>Use this when you already know the usable roof area.</p>
+    <form class="grid" method="post" action="/projects/manual">
+      <div>
+        <label>Project name</label>
+        <input type="text" name="name" required />
+      </div>
+      <div>
+        <label>Usable area (m2)</label>
+        <input type="number" step="0.1" name="usable_area_m2" required />
+      </div>
+      <div class="grid grid-3">
+        <div>
+          <label>Panel wattage (W)</label>
+          <input type="number" name="panel_wattage" value="{{ assumptions.panel_wattage_w }}" />
+        </div>
+        <div>
+          <label>Cost per watt</label>
+          <input type="number" step="0.1" name="cost_per_watt" value="{{ assumptions.cost_per_watt }}" />
+        </div>
+        <div>
+          <label>Tariff rate</label>
+          <input type="number" step="0.1" name="tariff_rate" value="{{ assumptions.tariff_rate }}" />
+        </div>
+      </div>
+      <button type="submit">Analyze manual area</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Draw roof on map</h2>
+    <p>Trace the rooftop outline to estimate usable area.</p>
+    <div id="roof-map" class="map"></div>
+    <form class="grid" method="post" action="/projects/polygon">
+      <input type="hidden" name="polygon_coords" id="polygon_coords" />
+      <div>
+        <label>Project name</label>
+        <input type="text" name="name" required />
+      </div>
+      <div class="grid grid-3">
+        <div>
+          <label>Panel wattage (W)</label>
+          <input type="number" name="panel_wattage" value="{{ assumptions.panel_wattage_w }}" />
+        </div>
+        <div>
+          <label>Cost per watt</label>
+          <input type="number" step="0.1" name="cost_per_watt" value="{{ assumptions.cost_per_watt }}" />
+        </div>
+        <div>
+          <label>Tariff rate</label>
+          <input type="number" step="0.1" name="tariff_rate" value="{{ assumptions.tariff_rate }}" />
+        </div>
+      </div>
+      <button type="submit">Analyze drawn roof</button>
+    </form>
+  </div>
+</section>
+
+<section style="margin-top: 24px;" class="grid">
+  <div class="card">
+    <h2>Default assumptions</h2>
+    <p>Update these in each form if you want custom values.</p>
+    <div class="stats" style="margin-top: 14px;">
+      <div class="stat">
+        <p>Panel area</p>
+        <h3>{{ assumptions.panel_area_m2 }} m2</h3>
+      </div>
+      <div class="stat">
+        <p>Panel wattage</p>
+        <h3>{{ assumptions.panel_wattage_w }} W</h3>
+      </div>
+      <div class="stat">
+        <p>Utilization</p>
+        <h3>{{ assumptions.roof_utilization }}</h3>
+      </div>
+      <div class="stat">
+        <p>Performance ratio</p>
+        <h3>{{ assumptions.performance_ratio }}</h3>
+      </div>
+      <div class="stat">
+        <p>Sun hours</p>
+        <h3>{{ assumptions.annual_sun_hours }}</h3>
+      </div>
+      <div class="stat">
+        <p>Cost per watt</p>
+        <h3>{{ assumptions.cost_per_watt }}</h3>
+      </div>
+      <div class="stat">
+        <p>Tariff rate</p>
+        <h3>{{ assumptions.tariff_rate }}</h3>
+      </div>
+      <div class="stat">
+        <p>Maintenance rate</p>
+        <h3>{{ assumptions.maintenance_rate }}</h3>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="margin-top: 30px;" class="grid">
+  <h2>Your projects</h2>
+  {% if projects %}
+    <div class="grid grid-3">
+      {% for project in projects %}
+        <a class="card project-card" href="/projects/{{ project.id }}">
+          <div class="tag">{{ project.method }}</div>
+          <h3>{{ project.name }}</h3>
+          <p>{{ project.address or "No address" }}</p>
+          <p>{{ "%.1f"|format(project.power_kw) }} kW estimate</p>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No projects yet. Start a new analysis above.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,18 +1,26 @@
 # analysis/roi_calculator.py
-def calculate_roi(panel_count: int, power_kw: float):
-    cost_per_panel = 20000  # ₹ per panel
-    annual_sun_hours = 1500  # average sunlight hours/year
-    unit_rate = 8  # ₹ per kWh
+def calculate_roi(system: dict, assumptions: dict) -> dict:
+    dc_kw = system["dc_kw"]
+    annual_kwh = system["annual_kwh"]
 
-    installation_cost = panel_count * cost_per_panel
-    annual_generation_kwh = power_kw * annual_sun_hours
-    annual_savings = annual_generation_kwh * unit_rate
-    payback_years = installation_cost / annual_savings if annual_savings else 0
-    total_savings_25yrs = annual_savings * 25
+    cost_per_watt = assumptions["cost_per_watt"]
+    tariff_rate = assumptions["tariff_rate"]
+    maintenance_rate = assumptions["maintenance_rate"]
+    degradation_rate = assumptions["degradation_rate"]
+
+    installation_cost = dc_kw * 1000 * cost_per_watt
+    annual_savings = annual_kwh * tariff_rate
+    annual_maintenance = installation_cost * maintenance_rate
+    annual_net = max(annual_savings - annual_maintenance, 0)
+
+    payback_years = installation_cost / annual_net if annual_net else 0
+    total_savings_25yrs = 0.0
+    for year in range(25):
+        total_savings_25yrs += annual_net * ((1 - degradation_rate) ** year)
 
     return {
-        "installation_cost": int(installation_cost),
-        "annual_savings": int(annual_savings),
-        "payback_years": payback_years,
-        "total_savings_25yrs": int(total_savings_25yrs)
+        "installation_cost": float(installation_cost),
+        "annual_savings": float(annual_net),
+        "payback_years": float(payback_years),
+        "total_savings_25yrs": float(total_savings_25yrs),
     }
