@@ -1,17 +1,44 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card auth-card">
+  {% if avatar_url %}
+    <div class="auth-avatar-wrap">
+      <img class="auth-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
+    </div>
+  {% endif %}
   <h1>Create account</h1>
   <p>Start your first solar analysis in minutes.</p>
   {% if error %}<div class="alert">{{ error }}</div>{% endif %}
-  <form method="post" action="/register" class="grid">
+  <form method="post" action="/register" class="grid" enctype="multipart/form-data">
+    <div>
+      <label>Name</label>
+      <input type="text" name="name" placeholder="Your name" />
+    </div>
     <div>
       <label>Email</label>
       <input type="email" name="email" required />
     </div>
     <div>
       <label>Password</label>
-      <input type="password" name="password" required minlength="6" />
+      <div class="password-field">
+        <input type="password" name="password" required minlength="6" />
+        <button class="toggle-password" type="button" aria-label="Toggle password">
+          👁
+        </button>
+      </div>
+    </div>
+    <div>
+      <label>Choose an avatar</label>
+      <div class="avatar-grid">
+        {% for avatar in avatars %}
+          <label class="avatar-option">
+            <input type="radio" name="avatar_choice" value="{{ avatar }}" {% if loop.first %}checked{% endif %} />
+            <img src="{{ avatar }}" alt="Avatar option" />
+          </label>
+        {% endfor %}
+      </div>
+      <p class="helper">Or upload a profile photo instead.</p>
+      <input type="file" name="avatar_upload" accept="image/*" capture="user" />
     </div>
     <button type="submit">Register</button>
   </form>

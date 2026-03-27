@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<header>
+  <div>
+    <div class="brand">SolarScope</div>
+    <p>Personalize your analysis defaults.</p>
+  </div>
+  <div class="header-actions">
+    {% if avatar_url %}
+      <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
+    {% endif %}
+    <a class="link" href="/dashboard">Back to dashboard</a>
+  </div>
+</header>
+
+<div class="card">
+  <h2>Profile & Preferences</h2>
+  <form class="grid" method="post" action="/settings" enctype="multipart/form-data">
+    <div>
+      <label>Name</label>
+      <input type="text" name="name" value="{{ user.name or '' }}" placeholder="Your name" />
+    </div>
+    <div>
+      <label>Profile photo</label>
+      <div class="profile-row">
+        {% if avatar_url %}
+          <img class="profile-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
+        {% endif %}
+        <div class="grid" style="gap: 12px;">
+          <div class="avatar-grid">
+            {% for avatar in avatars %}
+              <label class="avatar-option">
+                <input type="radio" name="avatar_choice" value="{{ avatar }}" {% if user.avatar_path == avatar %}checked{% endif %} />
+                <img src="{{ avatar }}" alt="Avatar option" />
+              </label>
+            {% endfor %}
+          </div>
+          <div>
+            <p class="helper">Upload a new photo or take one with your camera.</p>
+            <input type="file" name="avatar_upload" accept="image/*" capture="user" />
+          </div>
+          <label class="checkbox">
+            <input type="checkbox" name="remove_avatar" value="1" />
+            Remove current photo
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-3">
+      <div>
+        <label>Units</label>
+        <select name="units">
+          <option value="m" {% if preferences.units == 'm' %}selected{% endif %}>Meters</option>
+          <option value="ft" {% if preferences.units == 'ft' %}selected{% endif %}>Feet</option>
+        </select>
+      </div>
+      <div>
+        <label>Currency</label>
+        <select name="currency">
+          <option value="USD" {% if preferences.currency == 'USD' %}selected{% endif %}>USD ($)</option>
+          <option value="INR" {% if preferences.currency == 'INR' %}selected{% endif %}>INR (₹)</option>
+          <option value="EUR" {% if preferences.currency == 'EUR' %}selected{% endif %}>EUR (€)</option>
+          <option value="GBP" {% if preferences.currency == 'GBP' %}selected{% endif %}>GBP (£)</option>
+        </select>
+      </div>
+      <div>
+        <label>Panel type</label>
+        <select name="panel_type">
+          <option value="standard" {% if preferences.panel_type == 'standard' %}selected{% endif %}>Standard</option>
+          <option value="premium" {% if preferences.panel_type == 'premium' %}selected{% endif %}>Premium</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid grid-3">
+      <div>
+        <label>Goal</label>
+        <select name="goal">
+          <option value="max_savings" {% if preferences.goal == 'max_savings' %}selected{% endif %}>Max Savings</option>
+          <option value="min_cost" {% if preferences.goal == 'min_cost' %}selected{% endif %}>Min Cost</option>
+          <option value="max_output" {% if preferences.goal == 'max_output' %}selected{% endif %}>Max Output</option>
+        </select>
+      </div>
+      <div>
+        <label>Budget (optional)</label>
+        <input type="number" step="0.01" name="budget" value="{{ preferences.budget or '' }}" placeholder="e.g. 5000" />
+      </div>
+      <div>
+        <label>Sunlight factor</label>
+        <input type="number" step="0.05" name="sunlight_factor" value="{{ preferences.sunlight_factor }}" />
+        <p class="helper">1.0 = average, 1.2 = high sun, 0.85 = low sun</p>
+      </div>
+    </div>
+    <button type="submit">Save preferences</button>
+  </form>
+</div>
+{% endblock %}

@@ -57,3 +57,24 @@ if (mapContainer) {
 		}
 	});
 }
+
+const greeting = document.getElementById("greeting");
+if (greeting) {
+	const hour = new Date().getHours();
+	let label = "Good Evening";
+	if (hour >= 5 && hour <= 11) {
+		label = "Good Morning";
+	} else if (hour >= 12 && hour <= 16) {
+		label = "Good Afternoon";
+	}
+	const name = greeting.dataset.name || "there";
+	greeting.textContent = `${label}, ${name}`;
+}
+
+document.querySelectorAll(".toggle-password").forEach((button) => {
+	button.addEventListener("click", () => {
+		const input = button.parentElement.querySelector("input");
+		if (!input) return;
+		input.type = input.type === "password" ? "text" : "password";
+	});
+});

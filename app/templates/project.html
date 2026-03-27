@@ -5,7 +5,10 @@
     <div class="brand">SolarScope</div>
     <p>Project details and analysis summary.</p>
   </div>
-  <div>
+  <div class="header-actions">
+    {% if avatar_url %}
+      <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
+    {% endif %}
     <a class="link" href="/dashboard">Back to dashboard</a>
     <a class="link" style="margin-left: 16px;" href="/projects/{{ project.id }}/report">Download report</a>
   </div>
@@ -45,11 +48,11 @@
     <div class="stats" style="margin-top: 16px;">
       <div class="stat">
         <p>Installation cost</p>
-        <h3>{{ "%.0f"|format(project.installation_cost) }}</h3>
+        <h3>{{ currency_symbol }}{{ "%.0f"|format(project.installation_cost) }}</h3>
       </div>
       <div class="stat">
         <p>Annual savings</p>
-        <h3>{{ "%.0f"|format(project.annual_savings) }}</h3>
+        <h3>{{ currency_symbol }}{{ "%.0f"|format(project.annual_savings) }}</h3>
       </div>
       <div class="stat">
         <p>Payback (years)</p>
@@ -57,11 +60,29 @@
       </div>
       <div class="stat">
         <p>25-year savings</p>
-        <h3>{{ "%.0f"|format(project.total_savings_25yrs) }}</h3>
+        <h3>{{ currency_symbol }}{{ "%.0f"|format(project.total_savings_25yrs) }}</h3>
       </div>
     </div>
   </div>
 </div>
+
+{% if project.source_data and project.source_data.scenario %}
+  <div class="card" style="margin-top: 24px;">
+    <h3>Scenario comparison</h3>
+    <div class="stats" style="margin-top: 12px;">
+      <div class="stat">
+        <p>Standard panels</p>
+        <h3>{{ project.source_data.scenario.standard.panels }} panels</h3>
+        <p>{{ currency_symbol }}{{ project.source_data.scenario.standard.cost_per_watt }}/W</p>
+      </div>
+      <div class="stat">
+        <p>Premium panels</p>
+        <h3>{{ project.source_data.scenario.premium.panels }} panels</h3>
+        <p>{{ currency_symbol }}{{ project.source_data.scenario.premium.cost_per_watt }}/W</p>
+      </div>
+    </div>
+  </div>
+{% endif %}
 
 {% if project.image_path %}
   <div class="grid grid-2" style="margin-top: 24px;">

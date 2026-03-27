@@ -5,7 +5,12 @@
     <div class="brand">SolarScope</div>
     <p>Compare heuristic vs model segmentation results.</p>
   </div>
-  <a class="link" href="/dashboard">Back to dashboard</a>
+  <div class="header-actions">
+    {% if avatar_url %}
+      <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
+    {% endif %}
+    <a class="link" href="/dashboard">Back to dashboard</a>
+  </div>
 </header>
 
 <div class="card">

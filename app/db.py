@@ -16,3 +16,14 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+
+def ensure_columns(engine, table_name: str, columns: dict[str, str]) -> None:
+    with engine.connect() as connection:
+        result = connection.execute(f"PRAGMA table_info({table_name});")
+        existing = {row[1] for row in result.fetchall()}
+        for col_name, col_type in columns.items():
+            if col_name not in existing:
+                connection.execute(
+                    f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type};"
+                )
