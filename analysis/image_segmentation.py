@@ -40,7 +40,10 @@ def segment_rooftop(
         )
         return model_mask, usable_area_m2, confidence
 
-    bbox = detect_roof_bbox(image)
+    try:
+        bbox = detect_roof_bbox(image)
+    except Exception:
+        bbox = None
     if bbox:
         cropped = image.crop(bbox)
         mask_np, _ = _heuristic_mask(cropped)

@@ -58,6 +58,7 @@ set HF_DETECT_MODEL=Yifeng-Liu/rt-detr-finetuned-for-satellite-image-roofs-detec
 ```
 
 This will detect a roof bounding box, crop it, then refine the mask inside the box.
+The detector request automatically resizes large images and retries on transient API failures.
 
 ## Project Structure
 - app/: FastAPI web app, templates, and static assets
