@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<header>
-  <div>
-    <div class="brand">SolarScope</div>
-    <p id="greeting" data-name="{{ user_name }}">Welcome back</p>
-    <p>Analyze rooftops using imagery, address data, or manual input.</p>
+<header class="dashboard-header">
+  <div class="header-spacer"></div>
+  <div class="dashboard-title">
+    <div class="brand brand-center">SolarScope.AI</div>
+    <p id="greeting" class="greeting" data-name="{{ user_name }}">Welcome back</p>
+    <p class="subtitle">Analyze rooftops using imagery, address data, or manual input.</p>
   </div>
   <div class="header-actions">
     {% if avatar_url %}
@@ -23,8 +24,23 @@
 
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 
-<section class="grid grid-2">
-  <div class="card">
+<section class="card method-panel">
+  <div class="method-header">
+    <div>
+      <h2>Start a new analysis</h2>
+      <p>Pick the method that best matches your data source.</p>
+    </div>
+    <div class="method-select">
+      <label>Analysis method</label>
+      <select id="method-select">
+        <option value="upload">Upload rooftop image</option>
+        <option value="address">Address-based analysis</option>
+        <option value="manual">Manual roof area</option>
+        <option value="polygon">Draw roof on map</option>
+      </select>
+    </div>
+  </div>
+  <div class="method-card" data-method="upload">
     <h2>Upload rooftop image</h2>
     <form class="grid" method="post" action="/projects/upload" enctype="multipart/form-data">
       <div>
@@ -57,7 +73,7 @@
     </form>
   </div>
 
-  <div class="card">
+  <div class="method-card" data-method="address">
     <h2>Address-based analysis</h2>
     <form class="grid" method="post" action="/projects/address">
       <div>
@@ -87,7 +103,7 @@
     </form>
   </div>
 
-  <div class="card">
+  <div class="method-card" data-method="manual">
     <h2>Manual roof area</h2>
     <p>Use this when you already know the usable roof area.</p>
     <form class="grid" method="post" action="/projects/manual">
@@ -117,7 +133,7 @@
     </form>
   </div>
 
-  <div class="card">
+  <div class="method-card" data-method="polygon">
     <h2>Draw roof on map</h2>
     <p>Trace the rooftop outline to estimate usable area.</p>
     <div id="roof-map" class="map"></div>
@@ -144,6 +160,9 @@
       <button type="submit">Analyze drawn roof</button>
     </form>
   </div>
+  <p class="helper" style="margin-top: 12px;">
+    Need help? <a class="link" href="/about">Click here</a> for usage tips and troubleshooting.
+  </p>
 </section>
 
 <section style="margin-top: 24px;" class="grid">

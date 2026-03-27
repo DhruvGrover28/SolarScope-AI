@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<header>
+  <div>
+    <div class="brand">SolarScope</div>
+    <p>How to use SolarScope.AI effectively.</p>
+  </div>
+  <div class="header-actions">
+    {% if avatar_url %}
+      <img class="header-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
+    {% endif %}
+    <a class="link" href="/dashboard">Back to dashboard</a>
+  </div>
+</header>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Quick start</h2>
+    <ol class="helper-list">
+      <li>Pick your analysis method from the dropdown.</li>
+      <li>Fill the project name and required inputs.</li>
+      <li>Submit to generate the rooftop estimate.</li>
+      <li>Download the report from the project page.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>Method guide</h2>
+    <ul class="helper-list">
+      <li><strong>Upload image:</strong> Best for clear satellite or drone images.</li>
+      <li><strong>Address:</strong> Uses OpenStreetMap footprints.</li>
+      <li><strong>Manual area:</strong> Use when you already know usable roof area.</li>
+      <li><strong>Draw on map:</strong> Trace the roof outline directly.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Troubleshooting</h2>
+    <ul class="helper-list">
+      <li>If address lookup fails, try a nearby landmark.</li>
+      <li>For map drawing, zoom in for better accuracy.</li>
+      <li>Upload images in JPG or PNG format.</li>
+      <li>If the mask looks off, try a clearer top-down image.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Need more help?</h2>
+    <p>Email support or open an issue in the GitHub repo.</p>
+    <a class="link" href="https://github.com/DhruvGrover28/" target="_blank">Open GitHub</a>
+  </div>
+</div>
+{% endblock %}

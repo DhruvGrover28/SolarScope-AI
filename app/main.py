@@ -323,6 +323,16 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     )
 
 
+@app.get("/about")
+def about_page(request: Request, db: Session = Depends(get_db)):
+    user = require_user(request, db)
+    return templates.TemplateResponse(
+        request,
+        "about.html",
+        {"request": request, "avatar_url": resolve_user_avatar(user)},
+    )
+
+
 @app.get("/settings")
 def settings_page(request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)

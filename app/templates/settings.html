@@ -27,13 +27,18 @@
           <img class="profile-avatar" src="{{ avatar_url }}" alt="Profile avatar" />
         {% endif %}
         <div class="grid" style="gap: 12px;">
-          <div class="avatar-grid">
-            {% for avatar in avatars %}
-              <label class="avatar-option">
-                <input type="radio" name="avatar_choice" value="{{ avatar }}" {% if user.avatar_path == avatar %}checked{% endif %} />
-                <img src="{{ avatar }}" alt="Avatar option" />
-              </label>
-            {% endfor %}
+          <div class="avatar-carousel" data-avatar-input="avatar_choice">
+            <button class="carousel-btn" type="button" data-dir="prev" aria-label="Previous avatar">‹</button>
+            <div class="avatar-track">
+              {% for avatar in avatars %}
+                {% set is_active = (user.avatar_path == avatar) or (not user.avatar_path and loop.first) %}
+                <label class="avatar-slide {% if is_active %}is-active{% endif %}">
+                  <input type="radio" name="avatar_choice" value="{{ avatar }}" {% if is_active %}checked{% endif %} />
+                  <img src="{{ avatar }}" alt="Avatar option" />
+                </label>
+              {% endfor %}
+            </div>
+            <button class="carousel-btn" type="button" data-dir="next" aria-label="Next avatar">›</button>
           </div>
           <div>
             <p class="helper">Upload a new photo or take one with your camera.</p>
