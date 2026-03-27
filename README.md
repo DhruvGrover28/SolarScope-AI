@@ -47,6 +47,18 @@ set SOLAR_MODEL_PATH=C:\path\to\model.pt
 
 If not set, SolarScope uses the heuristic pipeline.
 
+## Roof Detection via Hugging Face (Optional)
+For improved roof detection, you can enable a roof detector model on Hugging Face.
+
+Set env vars:
+
+```bash
+set HF_TOKEN=your_huggingface_token
+set HF_DETECT_MODEL=Yifeng-Liu/rt-detr-finetuned-for-satellite-image-roofs-detection
+```
+
+This will detect a roof bounding box, crop it, then refine the mask inside the box.
+
 ## Project Structure
 - app/: FastAPI web app, templates, and static assets
 - analysis/: core analysis, segmentation, and ROI logic

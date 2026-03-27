@@ -9,10 +9,12 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Upload
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from analysis.image_segmentation import segment_rooftop
 from analysis.roi_calculator import calculate_roi
+from analysis.panel_layout import build_panel_layout
 from analysis.solar_estimation import DEFAULT_ASSUMPTIONS, estimate_system
 from app.auth import create_session, hash_password, read_session, verify_password
 from app.db import Base, DATA_DIR, SessionLocal, engine
@@ -196,17 +198,42 @@ def create_project_from_upload(
         buffer.write(image.file.read())
 
     mask_path = None
+    overlay_path = None
+    layout_summary = {}
     try:
         mask_img, usable_area_m2, confidence = segment_rooftop(
             file_path, roof_width_m=roof_width_m
         )
-        usable_area_m2 *= DEFAULT_ASSUMPTIONS["roof_utilization"]
+        layout = build_panel_layout(
+            Image.open(file_path),
+            mask_img,
+            roof_width_m=roof_width_m,
+            gsd_meters_per_pixel=None,
+            panel_w_m=DEFAULT_ASSUMPTIONS["panel_area_m2"],
+            panel_h_m=1.0,
+        )
+        usable_area_m2 = layout.usable_area_m2
         mask_name = f"mask_{file_id}.png"
         mask_path = OUTPUT_DIR / str(user.id)
         mask_path.mkdir(parents=True, exist_ok=True)
         mask_file_path = mask_path / mask_name
         mask_img.save(mask_file_path)
         mask_path = str(mask_file_path.relative_to(DATA_DIR))
+
+        overlay_name = f"overlay_{file_id}.png"
+        overlay_dir = OUTPUT_DIR / str(user.id)
+        overlay_dir.mkdir(parents=True, exist_ok=True)
+        overlay_file_path = overlay_dir / overlay_name
+        if layout.overlay is not None:
+            layout.overlay.save(overlay_file_path)
+            overlay_path = str(overlay_file_path.relative_to(DATA_DIR))
+
+        layout_summary = {
+            "panel_count": layout.panel_count,
+            "panel_area_m2": layout.panel_area_m2,
+            "coverage_ratio": layout.coverage_ratio,
+            "overlay_path": overlay_path,
+        }
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Segmentation failed: {exc}") from exc
 
@@ -217,6 +244,9 @@ def create_project_from_upload(
         "tariff_rate": tariff_rate,
     }
     system = estimate_system(usable_area_m2, assumptions)
+    if layout_summary.get("panel_count"):
+        system["panel_count"] = layout_summary["panel_count"]
+        system["dc_kw"] = (layout_summary["panel_count"] * assumptions["panel_wattage_w"]) / 1000
     roi = calculate_roi(system, assumptions)
 
     project = Project(
@@ -235,7 +265,11 @@ def create_project_from_upload(
         total_savings_25yrs=roi["total_savings_25yrs"],
         confidence=confidence,
         assumptions=assumptions,
-        source_data={"roof_width_m": roof_width_m},
+        source_data={
+            "roof_width_m": roof_width_m,
+            "panel_overlay_path": overlay_path,
+            "panel_coverage_ratio": layout_summary.get("coverage_ratio"),
+        },
     )
     db.add(project)
     db.commit()

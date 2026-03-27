@@ -56,6 +56,16 @@ def build_project_report(project, output_path: Path, data_dir: Path) -> None:
             _section_title(pdf, "Segmentation Mask")
             pdf.image(str(mask_path), w=170)
 
+    overlay_path = None
+    if project.source_data:
+        overlay_path = project.source_data.get("panel_overlay_path")
+    if overlay_path:
+        overlay_file = data_dir / overlay_path
+        if overlay_file.exists():
+            pdf.ln(4)
+            _section_title(pdf, "Panel Layout Overlay")
+            pdf.image(str(overlay_file), w=170)
+
     pdf.output(str(output_path))
 
 

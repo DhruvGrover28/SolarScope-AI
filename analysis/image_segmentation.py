@@ -8,10 +8,17 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from analysis.hf_detector import detect_roof_bbox
 try:
     import torch
 except ImportError:  # Optional dependency
     torch = None
+
+try:
+    from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
+except ImportError:  # Optional dependency
+    SamAutomaticMaskGenerator = None
+    sam_model_registry = None
 
 DEFAULT_GSD_M = 0.25
 
@@ -32,6 +39,35 @@ def segment_rooftop(
             roof_width_m,
         )
         return model_mask, usable_area_m2, confidence
+
+    bbox = detect_roof_bbox(image)
+    if bbox:
+        cropped = image.crop(bbox)
+        mask_np, _ = _heuristic_mask(cropped)
+        full_mask = np.zeros((image.size[1], image.size[0]), dtype="uint8")
+        x1, y1, x2, y2 = bbox
+        full_mask[y1:y2, x1:x2] = mask_np
+        mask_img = Image.fromarray(full_mask).convert("RGB")
+        usable_area_m2, confidence = _area_and_confidence_from_mask(
+            mask_img,
+            image,
+            gsd_meters_per_pixel,
+            roof_width_m,
+        )
+        return mask_img, usable_area_m2, confidence
+
+    mask_np, confidence = _heuristic_mask(image)
+    mask_img = Image.fromarray(mask_np).convert("RGB")
+    usable_area_m2, _ = _area_and_confidence_from_mask(
+        mask_img,
+        image,
+        gsd_meters_per_pixel,
+        roof_width_m,
+    )
+    return mask_img, usable_area_m2, confidence
+
+
+def _heuristic_mask(image: Image.Image) -> tuple[np.ndarray, float]:
     img_np = np.array(image.convert("RGB"))
     original_height, original_width, _ = img_np.shape
 
@@ -67,35 +103,17 @@ def segment_rooftop(
 
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     largest_cc_mask = np.zeros_like(mask)
-    usable_area_m2 = 0.0
 
     if num_labels > 1:
         largest_label_idx = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
         largest_cc_mask[labels == largest_label_idx] = 255
 
-        scale_m_per_px = _derive_scale_m_per_px(
-            gsd_meters_per_pixel, roof_width_m, original_width
-        )
-        scale_factor_x = original_width / processed_size[0]
-        scale_factor_y = original_height / processed_size[1]
-        pixel_area_m2 = (scale_m_per_px * scale_factor_x) * (
-            scale_m_per_px * scale_factor_y
-        )
-        usable_area_m2 = np.sum(largest_cc_mask == 255) * pixel_area_m2
-
     resized_mask = cv2.resize(
         largest_cc_mask, (original_width, original_height), interpolation=cv2.INTER_NEAREST
     )
 
-    confidence = _estimate_confidence(
-        resized_mask,
-        gsd_meters_per_pixel is not None or roof_width_m is not None,
-    )
-    segmented_rgb_mask = Image.fromarray(
-        cv2.cvtColor(resized_mask, cv2.COLOR_GRAY2RGB)
-    )
-
-    return segmented_rgb_mask, usable_area_m2, confidence
+    confidence = _estimate_confidence(resized_mask, has_scale=False)
+    return resized_mask, confidence
 
 
 def _load_image(image_input: Image.Image | str | "Path") -> Image.Image:
@@ -164,6 +182,10 @@ def _estimate_confidence(mask: np.ndarray, has_scale: bool) -> float:
 
 
 def _try_model_segmentation(image: Image.Image) -> Image.Image | None:
+    sam_mask = _try_sam_segmentation(image)
+    if sam_mask is not None:
+        return sam_mask
+
     model_path = os.getenv("SOLAR_MODEL_PATH")
     if not model_path or torch is None:
         return None
@@ -190,6 +212,37 @@ def _try_model_segmentation(image: Image.Image) -> Image.Image | None:
     mask = 1 / (1 + np.exp(-mask))
     mask = (mask > 0.5).astype("uint8") * 255
     mask_img = Image.fromarray(mask).resize(image.size)
+    return mask_img.convert("RGB")
+
+
+def _try_sam_segmentation(image: Image.Image) -> Image.Image | None:
+    checkpoint_path = os.getenv("SAM_CHECKPOINT_PATH")
+    model_type = os.getenv("SAM_MODEL_TYPE", "vit_b")
+    if not checkpoint_path or torch is None:
+        return None
+    if sam_model_registry is None or SamAutomaticMaskGenerator is None:
+        return None
+
+    checkpoint_path = os.path.expanduser(checkpoint_path)
+    if not os.path.exists(checkpoint_path):
+        return None
+
+    if model_type not in sam_model_registry:
+        return None
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
+    sam.to(device=device)
+    generator = SamAutomaticMaskGenerator(sam)
+
+    img_np = np.array(image.convert("RGB"))
+    masks = generator.generate(img_np)
+    if not masks:
+        return None
+
+    best_mask = max(masks, key=lambda item: item.get("area", 0))
+    mask = best_mask["segmentation"].astype("uint8") * 255
+    mask_img = Image.fromarray(mask)
     return mask_img.convert("RGB")
 
 

@@ -75,6 +75,12 @@
         <img class="image-preview" src="/data/{{ project.mask_path }}" />
       </div>
     {% endif %}
+    {% if project.source_data and project.source_data.panel_overlay_path %}
+      <div class="card">
+        <h3>Panel layout overlay</h3>
+        <img class="image-preview" src="/data/{{ project.source_data.panel_overlay_path }}" />
+      </div>
+    {% endif %}
   </div>
 {% endif %}
 
