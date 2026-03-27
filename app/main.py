@@ -95,7 +95,7 @@ def root(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/login")
 def login_page(request: Request):
-    return templates.TemplateResponse(name="login.html", context={"request": request})
+    return templates.TemplateResponse(request, "login.html", {"request": request})
 
 
 @app.post("/login")
@@ -108,8 +108,9 @@ def login(
     user = db.query(User).filter(User.email == email.lower().strip()).first()
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse(
-            name="login.html",
-            context={"request": request, "error": "Invalid credentials"},
+            request,
+            "login.html",
+            {"request": request, "error": "Invalid credentials"},
             status_code=400,
         )
 
@@ -121,9 +122,7 @@ def login(
 
 @app.get("/register")
 def register_page(request: Request):
-    return templates.TemplateResponse(
-        name="register.html", context={"request": request}
-    )
+    return templates.TemplateResponse(request, "register.html", {"request": request})
 
 
 @app.post("/register")
@@ -136,8 +135,9 @@ def register(
     normalized_email = email.lower().strip()
     if db.query(User).filter(User.email == normalized_email).first():
         return templates.TemplateResponse(
-            name="register.html",
-            context={"request": request, "error": "Account already exists"},
+            request,
+            "register.html",
+            {"request": request, "error": "Account already exists"},
             status_code=400,
         )
 
@@ -164,8 +164,9 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     projects = fetch_user_projects(db, user.id)
     return templates.TemplateResponse(
-        name="dashboard.html",
-        context={
+        request,
+        "dashboard.html",
+        {
             "request": request,
             "projects": projects,
             "assumptions": DEFAULT_ASSUMPTIONS,
@@ -245,10 +246,7 @@ def create_project_from_upload(
 @app.get("/evaluate")
 def evaluation_page(request: Request, db: Session = Depends(get_db)):
     require_user(request, db)
-    return templates.TemplateResponse(
-        name="evaluate.html",
-        context={"request": request},
-    )
+    return templates.TemplateResponse(request, "evaluate.html", {"request": request})
 
 
 @app.post("/evaluate")
@@ -276,8 +274,9 @@ def evaluate_segmentation(
     heuristic_mask.save(heuristic_path)
 
     return templates.TemplateResponse(
-        name="evaluate.html",
-        context={
+        request,
+        "evaluate.html",
+        {
             "request": request,
             "model_mask": str(model_path.relative_to(DATA_DIR)),
             "heuristic_mask": str(heuristic_path.relative_to(DATA_DIR)),
@@ -309,8 +308,9 @@ def create_project_from_polygon(
 
     if len(polygon) < 3:
         return templates.TemplateResponse(
-            name="dashboard.html",
-            context={
+            request,
+            "dashboard.html",
+            {
                 "request": request,
                 "projects": projects,
                 "assumptions": DEFAULT_ASSUMPTIONS,
@@ -370,8 +370,9 @@ def create_project_from_address(
         location = None
     if not location:
         return templates.TemplateResponse(
-            name="dashboard.html",
-            context={
+            request,
+            "dashboard.html",
+            {
                 "request": request,
                 "projects": projects,
                 "assumptions": DEFAULT_ASSUMPTIONS,
@@ -386,8 +387,9 @@ def create_project_from_address(
         footprint = None
     if not footprint:
         return templates.TemplateResponse(
-            name="dashboard.html",
-            context={
+            request,
+            "dashboard.html",
+            {
                 "request": request,
                 "projects": projects,
                 "assumptions": DEFAULT_ASSUMPTIONS,
@@ -445,8 +447,9 @@ def create_project_manual_area(
     if usable_area_m2 <= 0:
         projects = fetch_user_projects(db, user.id)
         return templates.TemplateResponse(
-            name="dashboard.html",
-            context={
+            request,
+            "dashboard.html",
+            {
                 "request": request,
                 "projects": projects,
                 "assumptions": DEFAULT_ASSUMPTIONS,
@@ -502,8 +505,9 @@ def project_detail(
         raise HTTPException(status_code=404, detail="Project not found")
 
     return templates.TemplateResponse(
-        name="project.html",
-        context={"request": request, "project": project},
+        request,
+        "project.html",
+        {"request": request, "project": project},
     )
 
 
