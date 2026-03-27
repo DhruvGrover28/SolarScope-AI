@@ -275,6 +275,14 @@ input, button, select {
   gap: 6px;
 }
 
+.avatar-slide img {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
 .avatar-slide.is-active {
   display: flex;
 }
@@ -321,8 +329,8 @@ input, button, select {
 }
 
 .profile-avatar {
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   border: 2px solid var(--card);
   box-shadow: 0 6px 14px var(--shadow);
@@ -402,8 +410,8 @@ button:hover {
 }
 
 .auth-avatar {
-  width: 56px;
-  height: 56px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   border: 2px solid var(--card);
   box-shadow: 0 8px 18px var(--shadow);
