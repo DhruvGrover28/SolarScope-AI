@@ -542,7 +542,17 @@ def evaluation_page(request: Request, db: Session = Depends(get_db)):
 def evaluate_segmentation(request: Request, image: UploadFile = File(...), db: Session = Depends(get_db)):
     user = require_user(request, db)
 
+    # Keep uploads bounded to avoid Render OOM during evaluation.
+    raw_bytes = image.file.read()
+    max_upload_bytes = int(os.getenv("SOLARSCOPE_MAX_UPLOAD_BYTES", "8000000"))  # ~8MB
+    if max_upload_bytes > 0 and len(raw_bytes) > max_upload_bytes:
+        raise HTTPException(status_code=400, detail="Image too large")
+
+    image_bytes = raw_bytes
+
+
     extension = Path(image.filename or "upload.jpg").suffix
+
     file_id = f"eval_{uuid4().hex}{extension}"
 
     user_dir = EVAL_DIR / str(user.id)

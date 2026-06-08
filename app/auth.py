@@ -7,9 +7,10 @@ from passlib.context import CryptContext
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    # Force a real key in production; falling back to a default can cause
-    # sessions to silently break across different Render instances.
-    SECRET_KEY = "dev-secret-key"
+    # Render instances must share the same SECRET_KEY across restarts.
+    # If it's missing, sessions will become unverifiable and logins fail.
+    raise RuntimeError("Missing required env var SECRET_KEY")
+
 
 SESSION_SALT = "session"
 
