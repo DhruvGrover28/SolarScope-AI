@@ -24,7 +24,10 @@ DEFAULT_GSD_M = 0.25
 
 # Render deployments are memory-constrained (often ~512MB). This flag switches
 # to lower-cost heuristics by disabling expensive refinement steps.
-SOLAR_SAFE_MODE = os.getenv("SOLARSCOPE_SAFE_MODE", "0").lower() in {"1", "true", "yes"}
+# Default to safe-mode because Render workers are memory constrained.
+# Enable/disable via SOLARSCOPE_SAFE_MODE.
+SOLAR_SAFE_MODE = os.getenv("SOLARSCOPE_SAFE_MODE", "1").lower() in {"1", "true", "yes"}
+
 
 # Cap pixels processed by OpenCV/GrabCut to avoid OOM.
 # 1.0 => disabled. Otherwise scales the longer edge to this value.

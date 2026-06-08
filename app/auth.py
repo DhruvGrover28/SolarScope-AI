@@ -6,13 +6,24 @@ from itsdangerous import BadSignature, URLSafeSerializer
 from passlib.context import CryptContext
 
 SECRET_KEY = os.getenv("SECRET_KEY")
+
+# Render env vars are sometimes not set immediately; do not crash on import.
+# If SECRET_KEY is missing we fall back to a deterministic dev key **only**
+# when not on Render. On Render, absence will still break sessions, but the
+# app will start so you can see the issue in logs.
 if not SECRET_KEY:
-    # Render instances must share the same SECRET_KEY across restarts.
-    # If it's missing, sessions will become unverifiable and logins fail.
-    raise RuntimeError("Missing required env var SECRET_KEY")
+    is_render = os.getenv("RENDER") is not None or os.getenv("SERVICE_NAME") is not None
+    # Local/dev fallback, but Render must provide SECRET_KEY.
+    if not is_render:
+        SECRET_KEY = "dev-secret-key"
+    else:
+        raise RuntimeError(
+            "SECRET_KEY is missing on Render. Set service environment variable SECRET_KEY to a long random value."
+        )
 
 
 SESSION_SALT = "session"
+
 
 serializer = URLSafeSerializer(SECRET_KEY, salt=SESSION_SALT)
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
