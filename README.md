@@ -20,14 +20,6 @@ To be added soon.
 - PDF report export
 - Clean, responsive UI with avatar selection and uploads
 
-## Example Use Case
-**Input Image**
-
-![Example Input Image](example3.jpg)
-
-**Output Results**
-
-![Example Output Result](Result_project.png)
 
 ## How It Works (High Level)
 1) User selects an analysis mode (image, address, draw, or manual).
