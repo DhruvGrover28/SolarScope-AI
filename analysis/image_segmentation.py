@@ -133,16 +133,34 @@ def _heuristic_mask(image: Image.Image) -> tuple[np.ndarray, float]:
         mask = _refine_with_grabcut(img_resized, mask)
 
 
-    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
-    largest_cc_mask = np.zeros_like(mask)
+    # Connected-components selection can throw shape/index errors on some inputs.
+    try:
+        if mask.ndim != 2:
+            mask = mask[:, :, 0]
+        mask = mask.astype("uint8")
 
-    if num_labels > 1:
-        largest_label_idx = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
-        largest_cc_mask[labels == largest_label_idx] = 255
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+        largest_cc_mask = np.zeros_like(mask)
 
-    resized_mask = cv2.resize(
-        largest_cc_mask, (original_width, original_height), interpolation=cv2.INTER_NEAREST
-    )
+        if num_labels > 1:
+            largest_label_idx = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
+            selector = labels == largest_label_idx
+            if selector.shape == largest_cc_mask.shape:
+                largest_cc_mask[selector] = 255
+            else:
+                # Fallback: keep the thresholded mask
+                largest_cc_mask = (mask > 0).astype("uint8") * 255
+
+        resized_mask = cv2.resize(
+            largest_cc_mask, (original_width, original_height), interpolation=cv2.INTER_NEAREST
+        )
+    except Exception:
+        # Hard fallback: don't crash the request.
+        resized_mask = cv2.resize(
+            (mask > 0).astype("uint8") * 255,
+            (original_width, original_height),
+            interpolation=cv2.INTER_NEAREST,
+        )
 
     confidence = _estimate_confidence(resized_mask, has_scale=False)
     return resized_mask, confidence
