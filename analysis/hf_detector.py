@@ -11,7 +11,10 @@ from PIL import Image
 HF_API_BASE = "https://api-inference.huggingface.co/models"
 DEFAULT_MODEL = "Yifeng-Liu/rt-detr-finetuned-for-satellite-image-roofs-detection"
 MAX_IMAGE_EDGE = 1024
-RETRY_COUNT = 2
+RETRY_COUNT = int(os.getenv("SOLARSCOPE_HF_RETRY_COUNT", "1"))
+# Keep HF calls bounded; Render workers are memory/CPU limited.
+HF_TIMEOUT_SECONDS = float(os.getenv("SOLARSCOPE_HF_TIMEOUT_SECONDS", "20"))
+
 
 
 def detect_roof_bbox(image: Image.Image) -> tuple[int, int, int, int] | None:
@@ -26,8 +29,10 @@ def detect_roof_bbox(image: Image.Image) -> tuple[int, int, int, int] | None:
 
     data = None
     for attempt in range(RETRY_COUNT + 1):
+
         try:
-            response = requests.post(url, headers=headers, data=payload, timeout=45)
+            response = requests.post(url, headers=headers, data=payload, timeout=HF_TIMEOUT_SECONDS)
+
             response.raise_for_status()
             data = response.json()
             break

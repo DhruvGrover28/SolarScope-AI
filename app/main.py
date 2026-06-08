@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Generator
 from uuid import uuid4
@@ -13,8 +14,8 @@ from PIL import Image, ImageOps
 from sqlalchemy.orm import Session
 
 from analysis.image_segmentation import segment_rooftop
-from analysis.roi_calculator import calculate_roi
 from analysis.panel_layout import build_panel_layout
+from analysis.roi_calculator import calculate_roi
 from analysis.solar_estimation import DEFAULT_ASSUMPTIONS, estimate_system
 from app.auth import create_session, hash_password, read_session, verify_password
 from app.db import Base, DATA_DIR, SessionLocal, engine, ensure_columns
@@ -43,11 +44,8 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
-    ensure_columns(
-        engine,
-        "users",
-        {"name": "TEXT", "preferences": "TEXT", "avatar_path": "TEXT"},
-    )
+    ensure_columns(engine, "users", {"name": "TEXT", "preferences": "TEXT", "avatar_path": "TEXT"})
+
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -100,14 +98,13 @@ def list_avatar_urls() -> list[str]:
     avatar_dir = STATIC_DIR / "avatars"
     if not avatar_dir.exists():
         return []
-    avatars = sorted(
+    return sorted(
         [
             f"/static/avatars/{path.name}"
             for path in avatar_dir.iterdir()
             if path.suffix.lower() in {".svg", ".png", ".jpg", ".jpeg"}
         ]
     )
-    return avatars
 
 
 def resolve_user_avatar(user: User | None) -> str | None:
@@ -121,10 +118,12 @@ def save_avatar_upload(upload: UploadFile, user_id: int) -> str:
     extension = Path(upload.filename or "avatar.png").suffix.lower()
     if extension not in {".png", ".jpg", ".jpeg", ".webp"}:
         raise HTTPException(status_code=400, detail="Unsupported avatar format")
+
     file_id = f"avatar_{uuid4().hex}{extension}"
     user_dir = AVATAR_DIR / str(user_id)
     user_dir.mkdir(parents=True, exist_ok=True)
     file_path = user_dir / file_id
+
     try:
         upload.file.seek(0)
         image = Image.open(upload.file)
@@ -150,9 +149,7 @@ def save_avatar_upload(upload: UploadFile, user_id: int) -> str:
 def select_avatar_from_choice(choice: str | None, avatars: list[str]) -> str | None:
     if not choice:
         return None
-    if choice in avatars:
-        return choice
-    return None
+    return choice if choice in avatars else None
 
 
 def pick_sunlight_factor(address: str | None) -> float:
@@ -210,7 +207,7 @@ def login(
 ):
     normalized_email = email.lower().strip()
     normalized_password = password.strip()
-    user = db.query(User).filter(User.email == normalized_email).first()
+
     if not normalized_password:
         return templates.TemplateResponse(
             request,
@@ -218,6 +215,8 @@ def login(
             {"request": request, "error": "Password cannot be empty"},
             status_code=400,
         )
+
+    user = db.query(User).filter(User.email == normalized_email).first()
     if not user or not verify_password(normalized_password, user.password_hash):
         return templates.TemplateResponse(
             request,
@@ -238,11 +237,7 @@ def register_page(request: Request):
     return templates.TemplateResponse(
         request,
         "register.html",
-        {
-            "request": request,
-            "avatars": avatars,
-            "avatar_url": resolve_user_avatar(None),
-        },
+        {"request": request, "avatars": avatars, "avatar_url": resolve_user_avatar(None)},
     )
 
 
@@ -258,6 +253,7 @@ def register(
 ):
     normalized_email = email.lower().strip()
     normalized_password = password.strip()
+
     if db.query(User).filter(User.email == normalized_email).first():
         avatars = list_avatar_urls()
         return templates.TemplateResponse(
@@ -376,6 +372,7 @@ def update_settings(
 ):
     user = require_user(request, db)
     avatars = list_avatar_urls()
+
     avatar_path = None
     if avatar_upload and avatar_upload.filename:
         avatar_path = save_avatar_upload(avatar_upload, user.id)
@@ -383,6 +380,7 @@ def update_settings(
         avatar_path = select_avatar_from_choice(avatar_choice, avatars)
     elif remove_avatar:
         avatar_path = None
+
     prefs = get_preferences(user)
     prefs.update(
         {
@@ -394,10 +392,12 @@ def update_settings(
             "sunlight_factor": sunlight_factor or prefs["sunlight_factor"],
         }
     )
+
     user.name = name.strip() or user.name
     user.preferences = prefs
     if avatar_path is not None:
         user.avatar_path = avatar_path
+
     db.add(user)
     db.commit()
     return RedirectResponse(url="/settings", status_code=302)
@@ -420,19 +420,27 @@ def create_project_from_upload(
 
     extension = Path(image.filename or "upload.jpg").suffix
     file_id = f"{uuid4().hex}{extension}"
+
     user_dir = UPLOAD_DIR / str(user.id)
     user_dir.mkdir(parents=True, exist_ok=True)
     file_path = user_dir / file_id
+
+    # Limit upload size to avoid OOM on memory-constrained deployments.
+    raw_bytes = image.file.read()
+    max_upload_bytes = int(os.getenv("SOLARSCOPE_MAX_UPLOAD_BYTES", "8000000"))  # ~8MB
+    if max_upload_bytes > 0 and len(raw_bytes) > max_upload_bytes:
+        raise HTTPException(status_code=400, detail="Image too large")
+
     with file_path.open("wb") as buffer:
-        buffer.write(image.file.read())
+        buffer.write(raw_bytes)
 
     mask_path = None
     overlay_path = None
-    layout_summary = {}
+    layout_summary: dict = {}
+
     try:
-        mask_img, usable_area_m2, confidence = segment_rooftop(
-            file_path, roof_width_m=roof_width_m
-        )
+        mask_img, usable_area_m2, confidence = segment_rooftop(file_path, roof_width_m=roof_width_m)
+
         layout = build_panel_layout(
             Image.open(file_path),
             mask_img,
@@ -442,17 +450,17 @@ def create_project_from_upload(
             panel_h_m=1.0,
         )
         usable_area_m2 = layout.usable_area_m2
+
         mask_name = f"mask_{file_id}.png"
-        mask_path = OUTPUT_DIR / str(user.id)
-        mask_path.mkdir(parents=True, exist_ok=True)
-        mask_file_path = mask_path / mask_name
+        mask_dir = OUTPUT_DIR / str(user.id)
+        mask_dir.mkdir(parents=True, exist_ok=True)
+        mask_file_path = mask_dir / mask_name
+
         mask_img.save(mask_file_path)
         mask_path = str(mask_file_path.relative_to(DATA_DIR))
 
         overlay_name = f"overlay_{file_id}.png"
-        overlay_dir = OUTPUT_DIR / str(user.id)
-        overlay_dir.mkdir(parents=True, exist_ok=True)
-        overlay_file_path = overlay_dir / overlay_name
+        overlay_file_path = mask_dir / overlay_name
         if layout.overlay is not None:
             layout.overlay.save(overlay_file_path)
             overlay_path = str(overlay_file_path.relative_to(DATA_DIR))
@@ -472,11 +480,14 @@ def create_project_from_upload(
         "cost_per_watt": cost_per_watt or profile["cost_per_watt"],
         "tariff_rate": tariff_rate or DEFAULT_ASSUMPTIONS["tariff_rate"],
     }
+
     assumptions["annual_sun_hours"] *= preferences["sunlight_factor"]
     system = estimate_system(usable_area_m2, assumptions)
+
     if layout_summary.get("panel_count"):
         system["panel_count"] = layout_summary["panel_count"]
         system["dc_kw"] = (layout_summary["panel_count"] * assumptions["panel_wattage_w"]) / 1000
+
     scenario = _build_scenarios(assumptions, usable_area_m2, preferences)
     roi = calculate_roi(system, assumptions)
 
@@ -505,6 +516,7 @@ def create_project_from_upload(
             "scenario": scenario,
         },
     )
+
     db.add(project)
     db.commit()
 
@@ -527,18 +539,16 @@ def evaluation_page(request: Request, db: Session = Depends(get_db)):
 
 
 @app.post("/evaluate")
-def evaluate_segmentation(
-    request: Request,
-    image: UploadFile = File(...),
-    db: Session = Depends(get_db),
-):
+def evaluate_segmentation(request: Request, image: UploadFile = File(...), db: Session = Depends(get_db)):
     user = require_user(request, db)
 
     extension = Path(image.filename or "upload.jpg").suffix
     file_id = f"eval_{uuid4().hex}{extension}"
+
     user_dir = EVAL_DIR / str(user.id)
     user_dir.mkdir(parents=True, exist_ok=True)
     file_path = user_dir / file_id
+
     with file_path.open("wb") as buffer:
         buffer.write(image.file.read())
 
@@ -606,6 +616,7 @@ def create_project_from_polygon(
         "cost_per_watt": cost_per_watt,
         "tariff_rate": tariff_rate,
     }
+
     system = estimate_system(usable_area_m2, assumptions)
     roi = calculate_roi(system, assumptions)
 
@@ -625,6 +636,7 @@ def create_project_from_polygon(
         assumptions=assumptions,
         source_data={"polygon": polygon},
     )
+
     db.add(project)
     db.commit()
 
@@ -650,6 +662,7 @@ def create_project_from_address(
         location = geocode_address(address)
     except Exception:
         location = None
+
     if not location:
         return templates.TemplateResponse(
             request,
@@ -667,6 +680,7 @@ def create_project_from_address(
         footprint = fetch_building_footprint(location["lat"], location["lon"])
     except Exception:
         footprint = None
+
     if not footprint:
         return templates.TemplateResponse(
             request,
@@ -682,6 +696,7 @@ def create_project_from_address(
 
     usable_area_m2 = footprint["area_m2"] * DEFAULT_ASSUMPTIONS["roof_utilization"]
     sunlight_factor = pick_sunlight_factor(location["display_name"])
+
     assumptions = {
         **DEFAULT_ASSUMPTIONS,
         "panel_wattage_w": panel_wattage or profile["panel_wattage_w"],
@@ -689,6 +704,7 @@ def create_project_from_address(
         "tariff_rate": tariff_rate or DEFAULT_ASSUMPTIONS["tariff_rate"],
     }
     assumptions["annual_sun_hours"] *= sunlight_factor
+
     system = estimate_system(usable_area_m2, assumptions)
     scenario = _build_scenarios(assumptions, usable_area_m2, preferences)
     roi = calculate_roi(system, assumptions)
@@ -717,6 +733,7 @@ def create_project_from_address(
             "scenario": scenario,
         },
     )
+
     db.add(project)
     db.commit()
 
@@ -736,6 +753,7 @@ def create_project_manual_area(
     user = require_user(request, db)
     preferences = get_preferences(user)
     profile = resolve_panel_profile(preferences["panel_type"])
+
     if usable_area_m2 <= 0:
         projects = fetch_user_projects(db, user.id)
         return templates.TemplateResponse(
@@ -756,6 +774,7 @@ def create_project_manual_area(
         "cost_per_watt": cost_per_watt or profile["cost_per_watt"],
         "tariff_rate": tariff_rate or DEFAULT_ASSUMPTIONS["tariff_rate"],
     }
+
     system = estimate_system(usable_area_m2, assumptions)
     scenario = _build_scenarios(assumptions, usable_area_m2, preferences)
     roi = calculate_roi(system, assumptions)
@@ -781,6 +800,7 @@ def create_project_manual_area(
             "scenario": scenario,
         },
     )
+
     db.add(project)
     db.commit()
 
@@ -788,16 +808,10 @@ def create_project_manual_area(
 
 
 @app.get("/projects/{project_id}")
-def project_detail(
-    request: Request,
-    project_id: int,
-    db: Session = Depends(get_db),
-):
+def project_detail(request: Request, project_id: int, db: Session = Depends(get_db)):
     user = require_user(request, db)
     project = (
-        db.query(Project)
-        .filter(Project.id == project_id, Project.user_id == user.id)
-        .first()
+        db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -821,6 +835,7 @@ def project_detail(
 def _build_scenarios(assumptions: dict, area_m2: float, preferences: dict) -> dict:
     standard = {**assumptions, "panel_wattage_w": 400, "cost_per_watt": 0.9}
     premium = {**assumptions, "panel_wattage_w": 450, "cost_per_watt": 1.2}
+
     standard_system = estimate_system(area_m2, standard)
     premium_system = estimate_system(area_m2, premium)
 
@@ -849,24 +864,20 @@ def _build_scenarios(assumptions: dict, area_m2: float, preferences: dict) -> di
 
 
 @app.get("/projects/{project_id}/report")
-def download_report(
-    request: Request,
-    project_id: int,
-    db: Session = Depends(get_db),
-):
+def download_report(request: Request, project_id: int, db: Session = Depends(get_db)):
     user = require_user(request, db)
     project = (
-        db.query(Project)
-        .filter(Project.id == project_id, Project.user_id == user.id)
-        .first()
+        db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     report_path = REPORT_DIR / f"project_{project.id}.pdf"
     build_project_report(project, report_path, data_dir=DATA_DIR, user_name=user.name)
+
     return FileResponse(
         report_path,
         media_type="application/pdf",
         filename=f"{project.name.replace(' ', '_')}_report.pdf",
     )
+

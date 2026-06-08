@@ -22,6 +22,17 @@ except ImportError:  # Optional dependency
 
 DEFAULT_GSD_M = 0.25
 
+# Render deployments are memory-constrained (often ~512MB). This flag switches
+# to lower-cost heuristics by disabling expensive refinement steps.
+SOLAR_SAFE_MODE = os.getenv("SOLARSCOPE_SAFE_MODE", "0").lower() in {"1", "true", "yes"}
+
+# Cap pixels processed by OpenCV/GrabCut to avoid OOM.
+# 1.0 => disabled. Otherwise scales the longer edge to this value.
+MAX_IMAGE_EDGE_SAFE = int(os.getenv("SOLARSCOPE_MAX_IMAGE_EDGE", "1200"))
+
+# When safe mode is on, skip GrabCut refinement (major memory/time saver).
+SKIP_GRABCUT_IN_SAFE_MODE = True
+
 
 def segment_rooftop(
     image_input: Image.Image | str | "Path",
@@ -30,7 +41,15 @@ def segment_rooftop(
     use_model: bool = True,
 ):
     image = _load_image(image_input)
-    model_mask = _try_model_segmentation(image) if use_model else None
+
+    # Hard downscale early to reduce downstream CPU/RAM usage.
+    # Keep aspect ratio; only scale when safe mode is enabled.
+    if SOLAR_SAFE_MODE:
+        image = _downscale_if_needed(image, max_edge=MAX_IMAGE_EDGE_SAFE)
+
+    # In safe mode, avoid high-cost model segmentation.
+    model_mask = _try_model_segmentation(image) if (use_model and not SOLAR_SAFE_MODE) else None
+
     if model_mask is not None:
         usable_area_m2, confidence = _area_and_confidence_from_mask(
             model_mask,
@@ -102,7 +121,10 @@ def _heuristic_mask(image: Image.Image) -> tuple[np.ndarray, float]:
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
 
-    mask = _refine_with_grabcut(img_resized, mask)
+    # GrabCut is expensive; skip it in safe mode to avoid Render OOM.
+    if not (SOLAR_SAFE_MODE and SKIP_GRABCUT_IN_SAFE_MODE):
+        mask = _refine_with_grabcut(img_resized, mask)
+
 
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     largest_cc_mask = np.zeros_like(mask)
@@ -122,7 +144,19 @@ def _heuristic_mask(image: Image.Image) -> tuple[np.ndarray, float]:
 def _load_image(image_input: Image.Image | str | "Path") -> Image.Image:
     if isinstance(image_input, Image.Image):
         return image_input
+    # Use PIL to keep memory predictable; segmentation later works on numpy/cv2.
     return Image.open(str(image_input))
+
+
+def _downscale_if_needed(image: Image.Image, max_edge: int) -> Image.Image:
+    width, height = image.size
+    max_current = max(width, height)
+    if max_current <= max_edge or max_edge <= 0:
+        return image
+    scale = max_edge / max_current
+    new_size = (max(1, int(width * scale)), max(1, int(height * scale)))
+    return image.resize(new_size)
+
 
 
 def _derive_scale_m_per_px(

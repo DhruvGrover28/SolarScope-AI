@@ -68,7 +68,10 @@ uvicorn app.main:app --reload
 3) Open `http://localhost:8000`.
 
 ## Environment Variables
-Use these to enable the detector-driven workflow. The pipeline uses the Hugging Face roof detector first, then applies heuristic segmentation inside the detected roof bounds; if detection is unavailable or fails, it falls back to the heuristic-only path.
+Use these to configure the app.
+
+Use these to enable the detector-driven workflow. The pipeline uses the Hugging Face roof detector first (optional), then applies heuristic segmentation inside the detected roof bounds; if detection is unavailable or fails, it falls back to the heuristic-only path.
+
 
 ### TorchScript Segmentation Model (Optional)
 

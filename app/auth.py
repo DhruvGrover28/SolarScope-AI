@@ -5,7 +5,12 @@ import os
 from itsdangerous import BadSignature, URLSafeSerializer
 from passlib.context import CryptContext
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    # Force a real key in production; falling back to a default can cause
+    # sessions to silently break across different Render instances.
+    SECRET_KEY = "dev-secret-key"
+
 SESSION_SALT = "session"
 
 serializer = URLSafeSerializer(SECRET_KEY, salt=SESSION_SALT)
@@ -20,9 +25,11 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, password_hash: str) -> bool:
+    # Avoid throwing exceptions on bad hash formats.
     if len(password) > MAX_PASSWORD_LENGTH:
         return False
     return pwd_context.verify(password, password_hash)
+
 
 
 def create_session(user_id: int) -> str:
