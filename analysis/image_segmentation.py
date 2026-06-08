@@ -51,7 +51,11 @@ def segment_rooftop(
         image = _downscale_if_needed(image, max_edge=MAX_IMAGE_EDGE_SAFE)
 
     # In safe mode, avoid high-cost model segmentation.
-    model_mask = _try_model_segmentation(image) if (use_model and not SOLAR_SAFE_MODE) else None
+    # Also note: the HF model fallback can produce masks whose size doesn't
+    # exactly match downstream assumptions; for stability on Render we skip
+    # model segmentation entirely in safe mode.
+    model_mask = None if SOLAR_SAFE_MODE else (_try_model_segmentation(image) if use_model else None)
+
 
     if model_mask is not None:
         usable_area_m2, confidence = _area_and_confidence_from_mask(
