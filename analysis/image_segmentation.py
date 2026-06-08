@@ -157,6 +157,20 @@ def _heuristic_mask(image: Image.Image) -> tuple[np.ndarray, float]:
         bin_mask = (mask > 0).astype("uint8") * 255
         inv_mask = (255 - bin_mask).astype("uint8")
 
+        # Very noisy masks can still cause instability; if the thresholded area is
+        # extremely small or extremely large, skip polarity selection and just
+        # return the raw threshold result.
+        raw_area = int(np.sum(bin_mask == 255))
+        total_px = int(bin_mask.shape[0] * bin_mask.shape[1])
+        if raw_area < (0.001 * total_px) or raw_area > (0.9 * total_px):
+            resized_mask = cv2.resize(
+                bin_mask,
+                (original_width, original_height),
+                interpolation=cv2.INTER_NEAREST,
+            )
+            confidence = _estimate_confidence(resized_mask, has_scale=False)
+            return resized_mask, confidence
+
         cand1, area1 = _largest_component(bin_mask)
         cand2, area2 = _largest_component(inv_mask)
 
