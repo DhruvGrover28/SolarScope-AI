@@ -134,25 +134,55 @@ def _heuristic_mask(image: Image.Image) -> tuple[np.ndarray, float]:
 
 
     # Connected-components selection can throw shape/index errors on some inputs.
-    try:
-        if mask.ndim != 2:
-            mask = mask[:, :, 0]
-        mask = mask.astype("uint8")
+    # Also, the heuristic polarity can be inverted (mask selects background instead of roof).
+    # We pick the polarity that produces a more plausible largest component.
+    resized_mask: np.ndarray
 
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
-        largest_cc_mask = np.zeros_like(mask)
-
+    def _largest_component(m: np.ndarray) -> tuple[np.ndarray, int]:
+        mm = m
+        if mm.ndim != 2:
+            mm = mm[:, :, 0]
+        mm = mm.astype("uint8")
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mm, connectivity=8)
+        out = np.zeros_like(mm, dtype="uint8")
         if num_labels > 1:
             largest_label_idx = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
             selector = labels == largest_label_idx
-            if selector.shape == largest_cc_mask.shape:
-                largest_cc_mask[selector] = 255
-            else:
-                # Fallback: keep the thresholded mask
-                largest_cc_mask = (mask > 0).astype("uint8") * 255
+            if selector.shape == out.shape:
+                out[selector] = 255
+        return out, int(np.sum(out == 255))
+
+    try:
+        # Ensure binary {0,255}
+        bin_mask = (mask > 0).astype("uint8") * 255
+        inv_mask = (255 - bin_mask).astype("uint8")
+
+        cand1, area1 = _largest_component(bin_mask)
+        cand2, area2 = _largest_component(inv_mask)
+
+        # Plausibility: reject masks that are too huge relative to image.
+        total_px = bin_mask.shape[0] * bin_mask.shape[1]
+        max_area_ratio = 0.35  # roof shouldn't cover >35% of the processed view
+
+        cand1_ok = area1 > 0 and (area1 / max(total_px, 1)) <= max_area_ratio
+        cand2_ok = area2 > 0 and (area2 / max(total_px, 1)) <= max_area_ratio
+
+        chosen = None
+        if cand1_ok and cand2_ok:
+            # pick larger plausible component
+            chosen = cand1 if area1 >= area2 else cand2
+        elif cand1_ok:
+            chosen = cand1
+        elif cand2_ok:
+            chosen = cand2
+        else:
+            # If both are implausible, fall back to the smaller one (likely less background)
+            chosen = cand1 if area1 <= area2 else cand2
 
         resized_mask = cv2.resize(
-            largest_cc_mask, (original_width, original_height), interpolation=cv2.INTER_NEAREST
+            chosen,
+            (original_width, original_height),
+            interpolation=cv2.INTER_NEAREST,
         )
     except Exception:
         # Hard fallback: don't crash the request.
